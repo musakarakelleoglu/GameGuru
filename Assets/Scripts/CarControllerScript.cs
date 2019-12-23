@@ -25,10 +25,19 @@ public class CarControllerScript : MonoBehaviour
     Vector3 m_TurningAxis;
    
     string m_CarDirection;
-    
+
+    float m_BondBreakingAngle;
+
+    //if rotation starts, it cannot be finished unless the input state is ended.
+    bool m_IsRotationStarted;
+    //bond will break after input is ended if this is true
+    bool m_BondBreakPossible;
+
+    bool m_IsRotatable;
 
     private void OnEnable()
     {
+        
         uIManager = FindObjectOfType(typeof(UIManager)) as UIManager;
         mapGenerator = FindObjectOfType(typeof(MapGenerator)) as MapGenerator;
 
@@ -42,16 +51,24 @@ public class CarControllerScript : MonoBehaviour
 
         m_TurningAxis = new Vector3();
         m_LineRenderer = new LineRenderer();
-    }
 
+        m_IsRotationStarted = false;
+        m_BondBreakPossible = false;
+        m_IsRotatable = false;
+    }
+    //şeride sok
+    //içeri baktır
 
     void Update()
     {
         m_CameraRig.transform.position = transform.position;
+        CheckIfIsRotatable();
+        
 
         if (!DataScript.inputLock)
         {
-            m_Rb.velocity = transform.up * m_Speed * -1f;
+            if(!m_IsRotationStarted)
+                m_Rb.velocity = transform.forward * m_Speed;
 
             if (m_InputX.IsInput())
             {
@@ -62,37 +79,205 @@ public class CarControllerScript : MonoBehaviour
                 //Find Turning axes and direction
                 if (gInput.phase == IPhase.Began)
                 {
+                    if (m_BondBreakPossible)
+                    {
+                        DataScript.turningPoints.Remove(m_ClosestTurningPoint);
+                    }
+
+                    m_BondBreakPossible = false;
                     m_ClosestTurningPoint = FindClosestTurningPoint();
-                    
                     m_LineRenderer = m_ClosestTurningPoint.gameObject.GetComponent<LineRenderer>();
                     DrawTireTrails(true);
                     FindTurningAxes();
                 }
                 else if(gInput.phase == IPhase.Ended)
                 {
-                    m_LineRenderer.SetPosition(1, m_LineRenderer.gameObject.transform.position);
-                    DrawTireTrails(false);
-                    StartCoroutine(CarCorrectionAnimator());
+                    DriftFinished();
                 }
                 else
                 {
-
-                    transform.RotateAround(m_ClosestTurningPoint.position, m_TurningAxis, 1f);
-                    m_LineRenderer.SetPosition(0, m_LineRenderer.gameObject.transform.position);
-                    m_LineRenderer.SetPosition(1, transform.position);
+                    TryRotateCar();
                 }
 
             }
         }
     }
 
-    //car correction after turning
-    IEnumerator CarCorrectionAnimator()
+    void CheckIfIsRotatable()
     {
-        m_Animator.SetBool("isCarCorrection", true);
-        yield return new WaitForSecondsRealtime(0.2f);
-        m_Animator.SetBool("isCarCorrection", false);
-        StopCoroutine(CarCorrectionAnimator());
+        if (FindClosestTurningPoint() != null)
+        {
+            float xDiff = transform.position.x - FindClosestTurningPoint().position.x;
+            float zDiff = transform.position.z - FindClosestTurningPoint().position.z;
+            if ((m_CarDirection == "up" || m_CarDirection == "down") && Mathf.Abs(zDiff) <= 1f)
+                m_IsRotatable =  true;
+            else if ((m_CarDirection == "right" || m_CarDirection == "left") && Mathf.Abs(xDiff) <= 1f)
+            {
+                m_IsRotatable = true;
+            }
+        }
+    }
+
+    void DriftFinished()
+    {
+        m_IsRotationStarted = false;
+        m_LineRenderer.SetPosition(0, m_LineRenderer.gameObject.transform.position);
+        m_LineRenderer.SetPosition(1, m_LineRenderer.gameObject.transform.position);
+        DrawTireTrails(false);
+        
+    }
+
+    void TryRotateCar()
+    {
+        if(m_IsRotationStarted || m_IsRotatable)
+        {
+            m_IsRotationStarted = true;
+            m_LineRenderer.SetPosition(0, m_LineRenderer.gameObject.transform.position);
+                m_LineRenderer.SetPosition(1, transform.position);
+
+                float xDiff = Mathf.Abs(transform.position.x - m_ClosestTurningPoint.position.x);
+                float zDiff = Mathf.Abs(transform.position.z - m_ClosestTurningPoint.position.z);
+                
+                    Quaternion lookRotation = Quaternion.LookRotation(m_ClosestTurningPoint.position - transform.position, Vector3.up);
+                    lookRotation.x = transform.rotation.x;
+                    lookRotation.z = transform.rotation.z;
+                    transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime);
+
+                   
+                    transform.RotateAround(m_ClosestTurningPoint.position, m_TurningAxis, 1.2f);
+               
+        }
+        
+    }
+
+    //car correction after turning
+    IEnumerator CarCorrectionAnimator(string roadType)
+    {
+        Vector3 currentLookPos = transform.rotation.eulerAngles;
+        
+        if (currentLookPos.y <= 90f && roadType == "up")
+        {
+            Debug.Log("uppppp");
+            while(Mathf.Abs(transform.rotation.eulerAngles.y) >= 0.5f)
+            {
+                Debug.Log("uppppp2");
+                transform.Rotate(new Vector3(0, -0.5f, 0));
+                yield return new WaitForEndOfFrame();
+            }
+            transform.Rotate(new Vector3(0, -0.5f, 0));
+            yield return new WaitForEndOfFrame();
+            while (Mathf.Abs(transform.rotation.eulerAngles.y) >= 355f)
+            {
+                Debug.Log("uppppp3");
+                transform.Rotate(new Vector3(0, -0.5f, 0));
+                yield return new WaitForEndOfFrame();
+            }
+            while (Mathf.Abs(transform.rotation.eulerAngles.y) <= 359f)
+            {
+                Debug.Log("uppppp4");
+                transform.Rotate(new Vector3(0, 0.5f, 0));
+                yield return new WaitForEndOfFrame();
+            }
+            transform.Rotate(new Vector3(0, 0.5f, 0));
+            yield return new WaitForEndOfFrame();
+        }
+        else if (currentLookPos.y >= 270f && roadType == "up")
+        {
+            while (Mathf.Abs(transform.rotation.eulerAngles.y) <= 359.5f)
+            {
+                transform.Rotate(new Vector3(0, 0.5f, 0));
+                yield return new WaitForEndOfFrame();
+            }
+            while (Mathf.Abs(transform.rotation.eulerAngles.y) <= 5f)
+            {
+                transform.Rotate(new Vector3(0, 0.5f, 0));
+                yield return new WaitForEndOfFrame();
+            }
+            while (Mathf.Abs(transform.rotation.eulerAngles.y) >= 0.5f)
+            {
+                transform.Rotate(new Vector3(0, -0.5f, 0));
+                yield return new WaitForEndOfFrame();
+            }
+        }
+        else if (currentLookPos.y <= 180f && currentLookPos.y >90f && roadType == "right")
+        {
+            while (Mathf.Abs(transform.rotation.eulerAngles.y) >= 85.5f)
+            {
+                transform.Rotate(new Vector3(0, -0.5f, 0));
+                yield return new WaitForEndOfFrame();
+            }
+            while (Mathf.Abs(transform.rotation.eulerAngles.y) <= 89.5f)
+            {
+                transform.Rotate(new Vector3(0, 0.5f, 0));
+                yield return new WaitForEndOfFrame();
+            }
+        }
+        else if (currentLookPos.y <= 90f && roadType == "right")
+        {
+            while (Mathf.Abs(transform.rotation.eulerAngles.y) <= 95f)
+            {
+                transform.Rotate(new Vector3(0, 0.5f, 0));
+                yield return new WaitForEndOfFrame();
+            }
+            while (Mathf.Abs(transform.rotation.eulerAngles.y) >= 90.5f)
+            {
+                transform.Rotate(new Vector3(0, -0.5f, 0));
+                yield return new WaitForEndOfFrame();
+            }
+        }
+        else if (currentLookPos.y <= 180f && currentLookPos.y >= 90f && roadType == "down")
+        {
+            while (Mathf.Abs(transform.rotation.eulerAngles.y) <= 185f)
+            {
+                transform.Rotate(new Vector3(0, 0.5f, 0));
+                yield return new WaitForEndOfFrame();
+            }
+            while (Mathf.Abs(transform.rotation.eulerAngles.y) >= 180.5f)
+            {
+                transform.Rotate(new Vector3(0, -0.5f, 0));
+                yield return new WaitForEndOfFrame();
+            }
+        }
+        else if (currentLookPos.y >= 180f && currentLookPos.y <= 270f && roadType == "down")
+        {
+            while (Mathf.Abs(transform.rotation.eulerAngles.y) >= 175)
+            {
+                transform.Rotate(new Vector3(0, -0.5f, 0));
+                yield return new WaitForEndOfFrame();
+            }
+            while (Mathf.Abs(transform.rotation.eulerAngles.y) <= 179.5)
+            {
+                transform.Rotate(new Vector3(0, 0.5f, 0));
+                yield return new WaitForEndOfFrame();
+            }
+        }
+        else if (currentLookPos.y >= 180f && currentLookPos.y <= 270f && roadType == "left")
+        {
+            while (Mathf.Abs(transform.rotation.eulerAngles.y) <= 275)
+            {
+                transform.Rotate(new Vector3(0, 0.5f, 0));
+                yield return new WaitForEndOfFrame();
+            }
+            while (Mathf.Abs(transform.rotation.eulerAngles.y) >= 270.5)
+            {
+                transform.Rotate(new Vector3(0, -0.5f, 0));
+                yield return new WaitForEndOfFrame();
+            }
+        }
+        else if (currentLookPos.y >= 270f && roadType == "left")
+        {
+            while (Mathf.Abs(transform.rotation.eulerAngles.y) >= 265f)
+            {
+                transform.Rotate(new Vector3(0, -0.5f, 0));
+                yield return new WaitForEndOfFrame();
+            }
+            while (Mathf.Abs(transform.rotation.eulerAngles.y) <= 269.5f)
+            {
+                transform.Rotate(new Vector3(0, 0.5f, 0));
+                yield return new WaitForEndOfFrame();
+            }
+        }
+        StopCoroutine(CarCorrectionAnimator(roadType));
     }
 
     //to give effect of drifting 
@@ -121,12 +306,13 @@ public class CarControllerScript : MonoBehaviour
     {
         if (m_CarDirection == "up")
         {
-
+            //rotate right
             if (m_ClosestTurningPoint.position.x > transform.position.x)
             {
                 m_TurningAxis = Vector3.up;
 
             }
+            //rotate left
             else
             {
                 m_TurningAxis = Vector3.down;
@@ -186,6 +372,7 @@ public class CarControllerScript : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
+       
         //to understand collision and game over
         if(collision.gameObject.tag == "CurvedRoadCollider" || collision.gameObject.tag == "StraightRoadCollider")
         {
@@ -197,22 +384,29 @@ public class CarControllerScript : MonoBehaviour
         //to find direction of a car on a straight road
         if(collision.gameObject.tag == "StraightRoad")
         {
-            
+
+           
             //should remove passed roads...
             DataScript.passedRoadCount++;
-            Debug.Log("passed: " + DataScript.passedRoadCount);
-            Debug.Log("total "+ DataScript.totalRoadCount);
-
+           
             //create new roads when the player are close enough to the last road
-            if(DataScript.passedRoadCount >= DataScript.totalRoadCount - 5)
+            if(DataScript.passedRoadCount >= DataScript.totalRoadCount - 2)
             {
                 mapGenerator.GenerateRoads(10);
             }
 
             string direction = collision.gameObject.GetComponent<StraightRoadDataHolder>().direction;
+            StartCoroutine(CarCorrectionAnimator(direction));
+
+            //car can not rotate when enters a new road...
+            if (m_CarDirection != direction) {
+                DataScript.turningPoints.Remove(m_ClosestTurningPoint);
+                m_IsRotatable = false;
+            }
+                
 
             //set car direction here for when the car does not go straight
-            if(direction == "up")
+            if (direction == "up")
             {
                 m_CarDirection = "up";
             }
@@ -230,7 +424,8 @@ public class CarControllerScript : MonoBehaviour
             }
 
             DataScript.inputLock = false;
-            
+            m_IsRotatable = false;
         }
     }
+    
 }

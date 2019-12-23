@@ -166,7 +166,7 @@ public class MapGenerator : MonoBehaviour
                 }
             }
 
-            //initiakize straight and curved roads
+            //initialize straight and curved roads
             GameObject roadToInitialize = Instantiate(m_StraightRoad, pos, rot);
             GameObject curvedRoadToInitialize = Instantiate(m_CurvedRoad, curvePos, curveRot);
             DataScript.turningPoints.Add(curvedRoadToInitialize.GetComponentsInChildren<Transform>()[1]);
@@ -185,7 +185,7 @@ public class MapGenerator : MonoBehaviour
         //car starts slightly above the surface to prevent unwanted collisions
         Vector3 carStartPoint = new Vector3(-6f, 0.51f, -20f);
         Quaternion carRotation = new Quaternion();
-        carRotation.eulerAngles = new Vector3(-90f, 0, 0);
+        carRotation.eulerAngles = new Vector3(0, 0, 0);
 
         GameObject instantiatedCar = Instantiate(m_Car, carStartPoint, carRotation);
         instantiatedCar.GetComponent<CarControllerScript>().m_CameraRig = m_CameraRig;
