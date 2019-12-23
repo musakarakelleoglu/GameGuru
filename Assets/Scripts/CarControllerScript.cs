@@ -45,7 +45,7 @@ public class CarControllerScript : MonoBehaviour
         m_Animator = GetComponentInChildren<Animator>();
 
         m_Rb = GetComponent<Rigidbody>();
-        m_Speed = 13f;
+        m_Speed = 20f;
 
         m_InputX = new InputX();
 
@@ -157,10 +157,10 @@ public class CarControllerScript : MonoBehaviour
         
         if (currentLookPos.y <= 90f && roadType == "up")
         {
-            Debug.Log("uppppp");
+           
             while(Mathf.Abs(transform.rotation.eulerAngles.y) >= 0.5f)
             {
-                Debug.Log("uppppp2");
+              
                 transform.Rotate(new Vector3(0, -0.5f, 0));
                 yield return new WaitForEndOfFrame();
             }
@@ -168,13 +168,12 @@ public class CarControllerScript : MonoBehaviour
             yield return new WaitForEndOfFrame();
             while (Mathf.Abs(transform.rotation.eulerAngles.y) >= 355f)
             {
-                Debug.Log("uppppp3");
                 transform.Rotate(new Vector3(0, -0.5f, 0));
                 yield return new WaitForEndOfFrame();
             }
             while (Mathf.Abs(transform.rotation.eulerAngles.y) <= 359f)
             {
-                Debug.Log("uppppp4");
+                
                 transform.Rotate(new Vector3(0, 0.5f, 0));
                 yield return new WaitForEndOfFrame();
             }
@@ -183,11 +182,13 @@ public class CarControllerScript : MonoBehaviour
         }
         else if (currentLookPos.y >= 270f && roadType == "up")
         {
-            while (Mathf.Abs(transform.rotation.eulerAngles.y) <= 359.5f)
+            while (Mathf.Abs(transform.rotation.eulerAngles.y) <= 359f)
             {
                 transform.Rotate(new Vector3(0, 0.5f, 0));
                 yield return new WaitForEndOfFrame();
             }
+            transform.Rotate(new Vector3(0, 0.5f, 0));
+            yield return new WaitForEndOfFrame();
             while (Mathf.Abs(transform.rotation.eulerAngles.y) <= 5f)
             {
                 transform.Rotate(new Vector3(0, 0.5f, 0));
