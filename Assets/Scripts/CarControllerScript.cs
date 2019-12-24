@@ -133,18 +133,14 @@ public class CarControllerScript : MonoBehaviour
         {
             m_IsRotationStarted = true;
             m_LineRenderer.SetPosition(0, m_LineRenderer.gameObject.transform.position);
-                m_LineRenderer.SetPosition(1, transform.position);
-
-                float xDiff = Mathf.Abs(transform.position.x - m_ClosestTurningPoint.position.x);
-                float zDiff = Mathf.Abs(transform.position.z - m_ClosestTurningPoint.position.z);
-                
-                    Quaternion lookRotation = Quaternion.LookRotation(m_ClosestTurningPoint.position - transform.position, Vector3.up);
-                    lookRotation.x = transform.rotation.x;
-                    lookRotation.z = transform.rotation.z;
-                    transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime);
-
-                   
-                    transform.RotateAround(m_ClosestTurningPoint.position, m_TurningAxis, 1.2f);
+            m_LineRenderer.SetPosition(1, transform.position);
+            
+            Quaternion lookRotation = Quaternion.LookRotation(m_ClosestTurningPoint.position - transform.position, Vector3.up);
+            lookRotation.x = transform.rotation.x;
+            lookRotation.z = transform.rotation.z;
+            transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * 2f);
+            
+            transform.RotateAround(m_ClosestTurningPoint.position, m_TurningAxis, 2f);
                
         }
         
@@ -160,7 +156,6 @@ public class CarControllerScript : MonoBehaviour
            
             while(Mathf.Abs(transform.rotation.eulerAngles.y) >= 0.5f)
             {
-              
                 transform.Rotate(new Vector3(0, -0.5f, 0));
                 yield return new WaitForEndOfFrame();
             }
@@ -182,12 +177,12 @@ public class CarControllerScript : MonoBehaviour
         }
         else if (currentLookPos.y >= 270f && roadType == "up")
         {
-            while (Mathf.Abs(transform.rotation.eulerAngles.y) <= 359f)
+            while (Mathf.Abs(transform.rotation.eulerAngles.y) <= 359f && Mathf.Abs(transform.rotation.eulerAngles.y) >= 270f)
             {
                 transform.Rotate(new Vector3(0, 0.5f, 0));
                 yield return new WaitForEndOfFrame();
             }
-            transform.Rotate(new Vector3(0, 0.5f, 0));
+            transform.Rotate(new Vector3(0, 2f, 0));
             yield return new WaitForEndOfFrame();
             while (Mathf.Abs(transform.rotation.eulerAngles.y) <= 5f)
             {
