@@ -75,20 +75,9 @@ public class CarControllerScript : MonoBehaviour
 
                 GeneralInput gInput = m_InputX.GetInput(0);
 
-
-                //Find Turning axes and direction
                 if (gInput.phase == IPhase.Began)
                 {
-                    if (m_BondBreakPossible)
-                    {
-                        DataScript.turningPoints.Remove(m_ClosestTurningPoint);
-                    }
-
-                    m_BondBreakPossible = false;
-                    m_ClosestTurningPoint = FindClosestTurningPoint();
-                    m_LineRenderer = m_ClosestTurningPoint.gameObject.GetComponent<LineRenderer>();
-                    DrawTireTrails(true);
-                    FindTurningAxes();
+                    DriftStarted();
                 }
                 else if(gInput.phase == IPhase.Ended)
                 {
@@ -103,6 +92,23 @@ public class CarControllerScript : MonoBehaviour
         }
     }
 
+    //when input is entered this function will look at if a bond should be broken, 
+    //sets the line renderer and starts tire trails, find turning axes to rotate the car around them
+    void DriftStarted()
+    {
+        if (m_BondBreakPossible)
+        {
+            DataScript.turningPoints.Remove(m_ClosestTurningPoint);
+        }
+
+        m_BondBreakPossible = false;
+        m_ClosestTurningPoint = FindClosestTurningPoint();
+        m_LineRenderer = m_ClosestTurningPoint.gameObject.GetComponent<LineRenderer>();
+        DrawTireTrails(true);
+        FindTurningAxes();
+    }
+
+    //checks if the car can be rotatable, when the car enters a new road it should not be rotatable until reaches the near of a turning point
     void CheckIfIsRotatable()
     {
         if (FindClosestTurningPoint() != null)
@@ -118,6 +124,7 @@ public class CarControllerScript : MonoBehaviour
         }
     }
 
+    //removes line and tire trails when drift finish
     void DriftFinished()
     {
         m_IsRotationStarted = false;
@@ -127,6 +134,8 @@ public class CarControllerScript : MonoBehaviour
         
     }
 
+    //if the car is rotatable or already rotating,
+    //this function rotates the car around the axis which found in DriftStarted function
     void TryRotateCar()
     {
         if(m_IsRotationStarted || m_IsRotatable)
@@ -147,6 +156,7 @@ public class CarControllerScript : MonoBehaviour
     }
 
     //car correction after turning
+    //corrects car according to its current rotation and the direction it should go on
     IEnumerator CarCorrectionAnimator(string roadType)
     {
         Vector3 currentLookPos = transform.rotation.eulerAngles;
@@ -391,6 +401,8 @@ public class CarControllerScript : MonoBehaviour
                 mapGenerator.GenerateRoads(10);
             }
 
+            //when the car enters a new road, make its correction,
+            //in curved roads correction is not possible just like sling drift
             string direction = collision.gameObject.GetComponent<StraightRoadDataHolder>().direction;
             StartCoroutine(CarCorrectionAnimator(direction));
 
